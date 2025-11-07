@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Case Battle — Neon Case</title>
+  <style>
+    :root {
+      --accent1: #00f5ff;
+      --accent2: #ff007f;
+      --bg1: #070b18;
+      --bg2: #0a0f22;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(circle at 50% 50%, #0b112a 0%, #050812 100%);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ===== CANVAS ДЛЯ СНЕГА ===== */
+    canvas#snow {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ===== ФОН ===== */
+    .bg-wrap {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .bg-layer {
+      position: absolute;
+      inset: -20%;
+      background: radial-gradient(closest-side at 30% 30%, rgba(0,255,255,0.15), transparent),
+                  radial-gradient(closest-side at 70% 70%, rgba(255,0,180,0.1), transparent);
+      filter: blur(60px) saturate(140%);
+      opacity: 0.6;
+      animation: moveBg 12s ease-in-out infinite alternate;
+    }
+
+    .bg-layer.layer-2 {
+      filter: blur(100px);
+      opacity: 0.4;
+      animation-duration: 20s;
+    }
+
+    @keyframes moveBg {
+      from { transform: translate(-5%, -3%) scale(1); }
+      to   { transform: translate(5%, 4%) scale(1.05); }
+    }
+
+    /* ===== КАРТОЧКА ===== */
+    .container {
+      position: relative;
+      z-index: 3;
+      width: 360px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      box-shadow: 0 0 40px rgba(0,255,255,0.25), inset 0 0 25px rgba(255,0,180,0.1);
+      backdrop-filter: blur(10px);
+      padding: 30px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .title {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--accent1);
+      text-shadow: 0 0 12px var(--accent1);
+    }
+
+    .subtitle {
+      color: rgba(255,255,255,0.7);
+      font-size: 14px;
+      margin-top: -8px;
+    }
+
+    /* ===== КРУГ ===== */
+    .dial-wrap {
+      position: relative;
+      width: 260px;
+      height: 260px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    .dial {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: conic-gradient(#ff007f 0deg, #ffb84d 120deg, #00f5ff 240deg, #00f5ff 360deg);
+      box-shadow: 0 0 40px rgba(0,255,255,0.3), inset 0 0 30px rgba(255,0,180,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 2.5s ease-out;
+      position: relative;
+    }
+
+    .arrow {
+      position: absolute;
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-bottom: 24px solid var(--accent1);
+      filter: drop-shadow(0 0 12px var(--accent1));
+      top: 30px;
+      left: 50%;
+      transform-origin: center 100px;
+      transform: translateX(-50%) rotate(0deg);
+      transition: transform 2.5s ease-out;
+      z-index: 3;
+    }
+
+    .dial-inner {
+      position: absolute;
+      width: 70%;
+      height: 70%;
+      border-radius: 50%;
+      background: rgba(8,12,26,0.95);
+      box-shadow: inset 0 0 25px rgba(0,255,255,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 2;
+      overflow: hidden;
+    }
+
+    /* ===== НЕОНОВАЯ ВОЛНА ===== */
+    .wave {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: repeating-conic-gradient(
+        from 0deg,
+        rgba(0,255,255,0.15) 0deg 10deg,
+        transparent 10deg 20deg
+      );
+      animation: spinWave 2s linear infinite;
+      filter: blur(10px);
+      opacity: 0.7;
+      z-index: 1;
+    }
+
+    @keyframes spinWave {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* ===== РЕЗУЛЬТАТ ===== */
+    .result {
+      font-size: 42px;
+      font-weight: 900;
+      color: var(--accent1);
+      text-shadow: 0 0 20px var(--accent1);
+      opacity: 0;
+      transform: scale(0.6);
+      transition: all 0.6s ease-out;
+      z-index: 3;
+    }
+
+    .result.show {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* ===== CANVAS ФЕЙЕРВЕРКА ===== */
+    canvas#fireworks {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      z-index: 4;
+      pointer-events: none;
+      top: 0;
+      left: 0;
+    }
+
+    /* ===== КНОПКА ===== */
+    .btn {
+      margin-top: 20px;
+      padding: 16px 36px;
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(90deg, var(--accent2), var(--accent1));
+      box-shadow: 0 0 30px rgba(0,255,255,0.45);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+    }
+
+    .btn:hover {
+      transform: scale(1.08);
+      box-shadow: 0 0 40px rgba(0,255,255,0.6);
+    }
+
+    .images {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .slot {
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      text-align: center;
+      padding: 8px;
+      box-shadow: 0 0 18px rgba(0,255,255,0.15);
+    }
+
+    .slot img {
+      width: 110px;
+      height: 110px;
+      object-fit: cover;
+      border-radius: 10px;
+      transition: all 0.6s ease;
+    }
+
+    .slot .title {
+      font-size: 13px;
+      margin-top: 8px;
+      color: var(--accent1);
+      transition: all 0.6s ease;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="snow"></canvas>
+  <div class="bg-wrap" aria-hidden>
+    <div class="bg-layer layer-1"></div>
+    <div class="bg-layer layer-2"></div>
+  </div>
+
+  <div class="container">
+    <div class="title">TR - @NUKEWAY</div>
+    <div class="subtitle">У нас выигрывают</div>
+
+    <div class="dial-wrap">
+      <div id="dial" class="dial">
+        <div class="arrow" id="arrow"></div>
+        <div class="dial-inner">
+          <canvas id="fireworks"></canvas>
+          <div class="wave" id="wave"></div>
+          <div id="result" class="result">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <button id="startBtn" class="btn">ОПРЕДЕЛИТЬ</button>
+
+    <div class="images">
+      <div class="slot">
+        <img src="images/1.webp" alt="До">
+        <div class="title">Сувенирный P2000 | Янтарный градиент</div>
+      </div>
+      <div class="slot">
+        <img id="imgAfter" src="images/2.webp" alt="После" style="opacity:0; transform:scale(0.8)">
+        <div id="titleAfter" class="title" style="opacity:0; transform:translateY(10px)">★ Перчатки «Гидра» | Мангры</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TARGET_PERCENT = 31.13;
+    const ANIMATION_MS = 2500;
+    const arrow = document.getElementById('arrow');
+    const btn = document.getElementById('startBtn');
+    const imgAfter = document.getElementById('imgAfter');
+    const titleAfter = document.getElementById('titleAfter');
+    const result = document.getElementById('result');
+    const wave = document.getElementById('wave');
+    const fireworksCanvas = document.getElementById('fireworks');
+    const fwCtx = fireworksCanvas.getContext('2d');
+
+    /* === СНЕГ === */
+    const snowCanvas = document.getElementById('snow');
+    const ctx = snowCanvas.getContext('2d');
+    let snowflakes = [];
+
+    function resizeSnow() {
+      snowCanvas.width = window.innerWidth;
+      snowCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeSnow);
+    resizeSnow();
+
+    for (let i = 0; i < 100; i++) {
+      snowflakes.push({
+        x: Math.random() * snowCanvas.width,
+        y: Math.random() * snowCanvas.height,
+        r: Math.random() * 2 + 1,
+        d: Math.random() + 0.5
+      });
+    }
+
+    function drawSnow() {
+      ctx.clearRect(0, 0, snowCanvas.width, snowCanvas.height);
+      ctx.fillStyle = "rgba(0,255,255,0.6)";
+      ctx.beginPath();
+      for (let i = 0; i < snowflakes.length; i++) {
+        const f = snowflakes[i];
+        ctx.moveTo(f.x, f.y);
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2, true);
+      }
+      ctx.fill();
+      moveSnow();
+    }
+
+    let angle = 0;
+    function moveSnow() {
+      angle += 0.01;
+      for (let i = 0; i < snowflakes.length; i++) {
+        const f = snowflakes[i];
+        f.y += Math.pow(f.d, 2) + 1;
+        f.x += Math.sin(angle) * 0.5;
+        if (f.y > snowCanvas.height) {
+          f.y = 0;
+          f.x = Math.random() * snowCanvas.width;
+        }
+      }
+    }
+
+    setInterval(drawSnow, 33);
+
+    /* === САЛЮТ === */
+    function launchFireworks() {
+      fireworksCanvas.width = fireworksCanvas.offsetWidth;
+      fireworksCanvas.height = fireworksCanvas.offsetHeight;
+
+      const particles = [];
+      const colors = ['#00f5ff', '#ff007f', '#ffb84d'];
+
+      for (let i = 0; i < 40; i++) {
+        const angle = (Math.PI * 2 * i) / 40;
+        const speed = Math.random() * 2 + 1;
+        particles.push({
+          x: fireworksCanvas.width / 2,
+          y: fireworksCanvas.height / 2,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 60,
+          color: colors[Math.floor(Math.random() * colors.length)]
+        });
+      }
+
+      function animateFireworks() {
+        fwCtx.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.02;
+          p.life--;
+          fwCtx.fillStyle = p.color;
+          fwCtx.globalAlpha = p.life / 60;
+          fwCtx.beginPath();
+          fwCtx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+          fwCtx.fill();
+        }
+        if (particles.some(p => p.life > 0)) requestAnimationFrame(animateFireworks);
+      }
+      animateFireworks();
+    }
+
+    /* === АНИМАЦИЯ КРУГА === */
+    btn.addEventListener('click', () => {
+      btn.disabled = true;
+      imgAfter.style.opacity = 0;
+      titleAfter.style.opacity = 0;
+      result.classList.remove('show');
+      result.textContent = '...';
+      wave.style.display = 'block';
+
+      const start = performance.now();
+      const from = 0;
+      const to = TARGET_PERCENT * 3.6 + 1080;
+
+      function animate(now) {
+        const t = Math.min(1, (now - start) / ANIMATION_MS);
+        const easeOut = 1 - Math.pow(1 - t, 3);
+        const currentDeg = from + easeOut * to;
+
+        arrow.style.transform = `translateX(-50%) rotate(${currentDeg}deg)`;
+
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          setTimeout(() => {
+            wave.style.display = 'none';
+            result.textContent = `${TARGET_PERCENT}%`;
+            result.classList.add('show');
+            launchFireworks();
+            imgAfter.style.opacity = 1;
+            imgAfter.style.transform = "scale(1)";
+            titleAfter.style.opacity = 1;
+            titleAfter.style.transform = "translateY(0)";
+            btn.disabled = false;
+          }, 200);
+        }
+      }
+
+      requestAnimationFrame(animate);
+    });
+  </script>
+</body>
+</html>
